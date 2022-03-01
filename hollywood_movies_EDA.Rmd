@@ -15,7 +15,6 @@ In this document, I will conduct an exploratory data analysis on the Top 1000 Ho
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-theme_set(theme_classic())
 ```
 
 
@@ -27,6 +26,9 @@ library(tidyverse)
 library(here)
 library(lubridate)
 library(knitr)
+
+theme_set(theme_classic())
+
 ```
 
 ## Import the Data 

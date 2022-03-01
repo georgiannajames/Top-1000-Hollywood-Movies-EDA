@@ -60,6 +60,8 @@ library(tidyverse)
 library(here)
 library(lubridate)
 library(knitr)
+
+theme_set(theme_classic())
 ```
 
 ## Import the Data
@@ -88,7 +90,16 @@ order to clean this dataset, you must:
 ``` r
 clean_movies <- movies %>%
   select(-`...1`) %>% # remove index
-  rename(title = `Title`, movie_info = `Movie Info`, distributor = `Distributor`, release_date = `Release Date`, domestic_sales_usd = `Domestic Sales (in $)`, international_sales_usd = `International Sales (in $)`, world_sales_usd = `World Sales (in $)`, genre = `Genre`, movie_runtime = `Movie Runtime`, license = `License`) #rename columns 
+  rename(title = `Title`, 
+         movie_info = `Movie Info`, 
+         distributor = `Distributor`, 
+         release_date = `Release Date`, 
+         domestic_sales_usd = `Domestic Sales (in $)`, 
+         international_sales_usd = `International Sales (in $)`, 
+         world_sales_usd = `World Sales (in $)`, 
+         genre = `Genre`, 
+         movie_runtime = `Movie Runtime`, 
+         license = `License`) #rename columns 
 ```
 
 2)  Next, I transformed the release date column into a year, month, and
