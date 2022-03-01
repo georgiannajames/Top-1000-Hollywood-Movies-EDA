@@ -1,0 +1,430 @@
+---
+title: "Top 1000 Hollywood Movies EDA"
+author: "Georgianna James"
+date: "2/18/2022"
+output:
+  github_document:
+    toc: true
+
+---
+
+# Introduction
+
+In this document, I will conduct an exploratory data analysis on the Top 1000 Hollywood Movies datset, which contains infomration about the top 1000 highest grossing films from 1972 to 2021. The dataset was last updated in January of 2022. THe data was originally compiled by scaping multiple sites, including rotten tomatoes and imbd. The original data can be downloaded [here](https://www.kaggle.com/sanjeetsinghnaik/top-1000-highest-grossing-movies?select=Highest+Holywood+Grossing+Movies.csv), but is also included in this repo. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Required Packages 
+
+
+```{r echo=TRUE, message=FALSE}
+library(tidyverse)
+library(here)
+library(lubridate)
+library(knitr)
+```
+
+## Import the Data 
+
+Because the data is included in this R project, if you have downloaded the project, you can import the data using the following commands. 
+
+```{r readdata, echo=TRUE, message=FALSE}
+
+movies <- read_csv(here("data", "Highest Holywood Grossing Movies.csv"))
+```
+
+# Tidying
+
+The bulk of the legwork in analyzing this dataset is in the cleaning. In order to clean this dataset, you must: 
+
+
+* rename all of the titles
+* transform the date column into a usable date column using separate and lubridate
+* transform the runtime column into minutes 
+
+
+1) First, I created a new data frame named "clean_movies" to clean, removed the index column, and renamed the columns to more user friendly titles. 
+
+```{r column cleaning, echo=TRUE}
+clean_movies <- movies %>%
+  select(-`...1`) %>% # remove index
+  rename(title = `Title`, movie_info = `Movie Info`, distributor = `Distributor`, release_date = `Release Date`, domestic_sales_usd = `Domestic Sales (in $)`, international_sales_usd = `International Sales (in $)`, world_sales_usd = `World Sales (in $)`, genre = `Genre`, movie_runtime = `Movie Runtime`, license = `License`) #rename columns 
+  
+```
+
+
+
+2) Next, I transformed the release date column into a year, month, and day column, as well as a new release date column, using separate and lubridate. 
+
+```{r date cleaning, echo=TRUE}
+clean_movies <- clean_movies %>%
+  drop_na(release_date) %>%
+  separate(release_date, into = c("release_day", "release_year"), sep = ",")  %>% #separate original date column
+  separate(release_day, into = c("release_month", "release_day"), sep = " ") %>% 
+  mutate(release_year = as.numeric(release_year), release_day = as.numeric(release_day), release_month = case_when(release_month == "January" ~ 1, release_month == "February" ~ 2, release_month == "March" ~ 3, release_month == "April" ~ 4, release_month == "May" ~ 5, release_month == "June" ~ 6, release_month == "July" ~ 7, release_month == "August" ~ 8, release_month == "September" ~ 8, release_month == "October" ~ 10, release_month == "November" ~ 11, release_month == "December" ~ 12)) %>% #mutating the columns to numeric type
+  drop_na(release_year, release_month, release_day) %>%
+  mutate(release_date = make_datetime(release_year, release_month, release_day)) #using lubridate to make a new release date column
+```
+
+
+
+3) Finally, I transformed the runtime column into a numeric column that reported runtime in total minutes. 
+
+```{r runtime cleaning, echo=TRUE, warning=FALSE}
+clean_movies <- clean_movies %>%
+  separate(movie_runtime, into = c("hours", "na", "minutes", "na2"), sep = " ") %>% #separating original runtime column
+  select(-na, -na2) %>% # removing "hrs" and "mins" columns this created
+  mutate(hours = as.numeric(hours), minutes = as.numeric(minutes)) %>% #mutating columns to numeric type
+  mutate(hours = hours * 60) %>% #transforming hours to minutes
+  mutate(runtime = hours + minutes) %>% #combininng previous hours with minutes to get new runtime columnn
+  select(-hours)
+```
+
+# Top Movie Total Distribution Over Time 
+
+
+```{r total top movies per year, echo=FALSE}
+clean_movies %>%
+  group_by(release_year) %>%
+  summarise(top_movies_per_year = n()) %>%
+  ggplot(aes(x = release_year, y = top_movies_per_year)) +
+  geom_col() +
+  labs(
+    title = "Total Top US Hollywood Movies per Year",
+    y = "Number of Top Movies per Year",
+    x = "Year"
+  ) +
+  theme_classic()
+```
+
+
+
+# Average World Sales Over Time
+
+## How do the world sales of top Hollywood movies vary over time? 
+
+
+```{r world sales over time, echo=FALSE}
+clean_movies %>%
+  ggplot(aes(x = release_date, y = world_sales_usd)) +
+  geom_line() +
+  labs(
+    title = "World Sales of Top US Hollywood Movies Over Time (in USD)",
+    y = "World Sales per Year (in USD)",
+    x = "Year"
+  ) +
+  theme_classic()
+```
+
+
+
+## How does the average yearly world sales of top Hollywood movies vary over time?
+
+```{r average world sales over time, echo=FALSE}
+clean_movies %>%
+  group_by(release_year) %>%
+  summarise(avg_world_sales = mean(world_sales_usd)) %>%
+  ggplot(aes(x = release_year, y = avg_world_sales)) +
+  geom_line() +
+  labs(
+    title = "Average World Sales of Top US Hollywood Movies Over Time (in USD)",
+    y = "Average World Sales per Year (in USD)",
+    x = "Year"
+  ) +
+  theme_classic()
+```
+
+
+The graphs reveal that variation in world sales increased dramatically overtime, as the volume of top movies being made increased substantailly. However, when you take the average world sales per year, you caputre less of this variation. In the average world sales figure you observe a few peaks. The highest peak come early, around the mid '70s, and then the trend slowly decreases into the late '80s, and starts to increase again until 2020, likely around when the COVID-19 pandemic began. 
+
+
+# License Trends 
+
+## How does average world sales vary by license?
+
+```{r sales over time by license, echo=FALSE, message=FALSE}
+clean_movies %>%
+  drop_na(license) %>%
+  group_by(release_year, license) %>%
+  summarise(avg_world_sales = mean(world_sales_usd)) %>%
+  ggplot(aes(x = release_year, y = avg_world_sales, color = license)) +
+  geom_line() +
+  labs(
+    title = "Average World Sales of Top US Hollywood Movies Over Time (in USD)",
+    y = "Average World Sales per Year (in USD)",
+    x = "Year"
+  ) +
+  theme_classic()
+```
+
+
+
+This graph reveals that PG and PG-19 movies follow make a similar amount of money, with R-rated films making slightly less. Additionally, there are a few G-Rated films with sales that are significantly higher than any other films. Let's look a a table of all the G-rated movies to see which ones these were. 
+
+
+
+### G-Rated Films in the Top 1000 Hollywood Movies Dataset
+
+
+```{r grated table, echo=FALSE}
+g_rated <- clean_movies %>%
+  filter(license == "G") %>%
+  select(title, distributor, release_year, world_sales_usd) %>%
+  arrange(desc(world_sales_usd))
+
+kable(g_rated, title = "G Rated Movies", col.names = c("Title", "Distributor", "Release Year", "World Sales ($)"))
+```
+
+
+
+The two major outliers, which made over a billion dollars in world sales, were Toy Story 4 (2019) and The Lion King (1994), which of course makes sense, considering these are some pretty classic films. 
+
+
+## What do the average sales look like per license?
+
+```{r average sales per license, echo=FALSE}
+clean_movies %>%
+  drop_na(license) %>%
+  group_by(license) %>%
+  summarise(avg_world_sales = mean(world_sales_usd)) %>%
+  ggplot(aes(x = reorder(license, -avg_world_sales), y = avg_world_sales)) +
+  geom_col() +
+  labs(
+    title = "Average World Sales of Top US Hollywood Movies by License (in USD)",
+    y = "Average World Sales per Year (in USD)",
+    x = "License"
+  ) +
+  theme_classic()
+```
+
+
+
+G-Rated movies, as we saw before, average really high sales, but not too much more than PG-13 or PG movies. R-rated movies trail behind pretty significantly. Are distributors focusing on G-rated movies due to the potential profitability?
+
+
+## What is the distribution of films in each license category?
+
+```{r top movies per year by license, echo=FALSE, message=FALSE}
+clean_movies %>%
+  drop_na(license) %>%
+  group_by(release_year, license) %>%
+  summarise(top_movies_per_year = n()) %>%
+  ggplot(aes(x = release_year, y = top_movies_per_year)) +
+  geom_col() +
+  labs(
+    title = "Total Top US Hollywood Movies per Year",
+    y = "Number of Top Movies per Year",
+    x = "Year"
+  ) +
+  theme_classic() +
+  facet_wrap(vars(license))
+```
+
+
+
+G rated movies very infrequently appear on the top 1000s Hollywood movies list, however, when they do, they are really profitable! It seems as though, if a G-rated movie is going to be a hit, it's going to be a big hit. 
+
+PG-13 movies, on the other hand, are the most frequent type of film to make it on the top 1000 Hollywood movies list, and this license category has average world sales that rival that of the G-rated films. 
+
+
+
+# Runtime Trends 
+
+## How does it relate to other variables?
+
+```{r runtime, echo=FALSE, message=FALSE, warning=FALSE}
+clean_movies %>%
+  ggplot(aes(x = runtime, y = world_sales_usd)) +
+  geom_line() +
+  labs(
+    title = "Runtime vs World Sales",
+    y = "World Sales (in USD)",
+    x = "Runtime (in minutes)"
+  ) +
+  theme_classic(base_size = 10)
+```
+
+
+
+There isn't to strong of a relationship between runtime and world sales, though you might be able to tease our a slightly positive relationship. 
+
+```{r avg runtime per license, echo=FALSE}
+clean_movies %>%
+  drop_na(runtime) %>%
+  drop_na(license) %>%
+  group_by(license) %>%
+  summarise(avg_runtime = mean(runtime), na.rm = TRUE) %>%
+  ggplot(aes(x = reorder(license, avg_runtime), y = avg_runtime)) +
+  geom_col() +
+  labs(
+    title = "Average Runtime per License",
+    subtitle = "in minutes",
+    x = "License",
+    y = "Average Runtime"
+  ) +
+  theme_classic()
+```
+
+
+
+Rated G movies average to be the shortest, while R and PG-13 are the longest!
+
+
+```{r runtime overtime, echo=FALSE}
+clean_movies %>%
+  ggplot(aes(x = release_date, y = runtime)) +
+  geom_line() +
+  labs(
+    title = "Runtime Over Time",
+    x = "Release Date",
+    y = "Runtime (in minutes)"
+  ) +
+  theme_classic(base_size = 10)
+```
+
+
+Variation in runtime increased overtime as more top movies were made per year. 
+
+
+# Distributor Trends 
+
+
+## Which distributor makes the most on average?
+
+```{r sales per distributor, echo=FALSE}
+clean_movies %>%
+  group_by(distributor) %>%
+  summarise(avg_world_sales = mean(world_sales_usd)) %>%
+  ggplot(aes(x = reorder(distributor, avg_world_sales), y = avg_world_sales)) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    title = "Average World Sales of Top US Hollywood Movies by Distributor",
+    subtitle = "in USD",
+    y = "Average World Sales per Year (in USD)",
+    x = "Distributor"
+  ) +
+  theme_classic(base_size = 10)
+```
+
+
+
+Most of the top distributors are household names, but there is one that is less familiar: Newmarket Films, which makes the top of the list in terms of average world sales. Let's look at what top films Newmarket Films has made. 
+
+### Newmarket Films movies in the Top 1000 Hollywood Films Dataset
+
+```{r newmarket films, echo=FALSE}
+
+newmarket <- clean_movies %>%
+  filter(distributor == "Newmarket Films") %>%
+  select(title, release_year, distributor, world_sales_usd)
+
+kable(newmarket, title = "Newmarket Films", col.names = c("Title", "Release Year", "Distributor", "World Sales ($)"))
+```
+
+
+
+Apparently, Newmarket Films made a film titled The Passion of Christ (2004) that did incredibly well, with world sales of over six billion dollars. However, this is the onnly one of their films that made the top 1000 Hollywood movies dataset, so their average is super high. 
+
+
+
+## Which distributors most frequently make this top 1000 grossing movies list?
+
+
+```{r number of top movies per distributor, echo=FALSE}
+clean_movies %>%
+  drop_na(distributor) %>%
+  group_by(distributor) %>%
+  summarise(top_movies_per_distributor = n()) %>%
+  ggplot(aes(x = reorder(distributor, top_movies_per_distributor), y = top_movies_per_distributor)) +
+  geom_col() +
+  labs(
+    title = "Total Top US Hollywood Movies per Distributor",
+    y = "Number of Top Movies per Distributor",
+    x = "Distributor"
+  ) +
+  theme_classic() +
+  coord_flip()
+```
+
+
+
+This is likely what most people would expect, with the classis distributors making significantly more top  grossing films than any other companies. 
+
+# Top Distributor Trends
+
+
+```{r top distributor, include=FALSE}
+(top_distributors <- clean_movies %>%
+  filter(distributor == c("Warner Bros.", "Walt Disney Studios Motion Pictures", "Universal Pictures", "Twentieth Century Fox", "Sony Pictures Entertainment (SPE)", "Paramount Pictures")))
+```
+
+
+
+
+## What license category do the top distributors specialize in?
+
+```{r top distributor license breakdown, echo=FALSE}
+
+top_distributors %>%
+  drop_na(license) %>%
+  group_by(license, distributor) %>%
+  summarise(top_movies_per_license = n(), .groups = "keep") %>%
+  ggplot(aes(x = reorder(license, top_movies_per_license), y = top_movies_per_license)) +
+  geom_col() +
+  labs(
+    title = "Total Top US Hollywood Movies per License for Top Distributors",
+    subtitle = "from 1983 - 2021",
+    y = "Number of Top Movies",
+    x = "License"
+  ) +
+  theme_classic() +
+  facet_wrap(vars(distributor))
+```
+
+The most noticable trends are that Disney is the most successful at making G-Rated movies, as they are the only ones with any G-rated movies in the top 1000 grossing movies list. Additionally, Universal seems to have made ignificantly more PG-13 movies that anyone else. 
+
+## Who is making the most money? 
+
+```{r total sales for top distributors, echo=FALSE}
+top_distributors %>% 
+  group_by(distributor) %>% 
+  summarise(total_world_sales = sum(world_sales_usd)) %>% 
+  ggplot(aes(x = reorder(distributor, total_world_sales), y = total_world_sales)) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    title = "Total World Sales of Top Distributors",
+    subtitle = "from 1983 - 2021",
+    y = "Total World Sales ($)",
+    x = "Distributor"
+  ) +
+  theme_classic()
+  
+```
+
+
+
+Walt Disney Studios has made significantly more than the other top distributors from 1983 - 2021. Universal comes in at second with a little more than half of what Disney has made. 
+
+# Conclusion
+
+R-rated movies seem to be the least successful of the license categories. I predict that this is because of the age restrictions regarding who can see R-rated movies, however that goes beyond the scope of this analysis. G-rated movies are the least frequent rating of movie to make this list. However, when they do, they are shorter on average and make more money on average than the other categories. 
+
+In regards to distributors, Walt Disney Studios appears to be the most successful at making G-rated movies, and also at making money. I hypothesize that the two are related, considering how much money the hit G-rated movies make. Warner Bros., who had the most movies on this list but made no G-rated movies and very few PG-13, made significantly less than Disney, which goes to show how much more profitable more accessible movies are. 
+
+# NA Analysis 
+
+In this dataset, there are a lot of uneccessary missing values that could be filled in with a quick google search. Here is a list of those films that contained important missing values. As you can see, including this information may significantly change the analysis. 
+
+```{r na movies, echo=FALSE}
+na_movies <- movies %>% 
+  filter(is.na(`Release Date`), is.na(License)) %>% 
+  select(Title)
+
+kable(na_movies)
+```
+
