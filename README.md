@@ -4,13 +4,12 @@ Author: Georgianna James
 
 
 ## Pacakges Required 
-
-* library(tidyverse)
-* library(here)
-* library(lubridate)
-* library(knitr)
-
-
+```
+library(tidyverse)
+library(here)
+library(lubridate)
+library(knitr)
+``` 
 
 ## Summary
 
