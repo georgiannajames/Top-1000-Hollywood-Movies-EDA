@@ -14,6 +14,8 @@ In this document, I will conduct an exploratory data analysis on the Top 1000 Ho
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+theme_set(theme_classic())
 ```
 
 
@@ -51,7 +53,16 @@ The bulk of the legwork in analyzing this dataset is in the cleaning. In order t
 ```{r column cleaning, echo=TRUE}
 clean_movies <- movies %>%
   select(-`...1`) %>% # remove index
-  rename(title = `Title`, movie_info = `Movie Info`, distributor = `Distributor`, release_date = `Release Date`, domestic_sales_usd = `Domestic Sales (in $)`, international_sales_usd = `International Sales (in $)`, world_sales_usd = `World Sales (in $)`, genre = `Genre`, movie_runtime = `Movie Runtime`, license = `License`) #rename columns 
+  rename(title = `Title`, 
+         movie_info = `Movie Info`, 
+         distributor = `Distributor`, 
+         release_date = `Release Date`, 
+         domestic_sales_usd = `Domestic Sales (in $)`, 
+         international_sales_usd = `International Sales (in $)`, 
+         world_sales_usd = `World Sales (in $)`, 
+         genre = `Genre`, 
+         movie_runtime = `Movie Runtime`, 
+         license = `License`) #rename columns 
   
 ```
 
@@ -96,8 +107,7 @@ clean_movies %>%
     title = "Total Top US Hollywood Movies per Year",
     y = "Number of Top Movies per Year",
     x = "Year"
-  ) +
-  theme_classic()
+  ) 
 ```
 
 
@@ -116,7 +126,7 @@ clean_movies %>%
     y = "World Sales per Year (in USD)",
     x = "Year"
   ) +
-  theme_classic()
+  scale_y_continuous(labels = scales::dollar)
 ```
 
 
@@ -134,7 +144,7 @@ clean_movies %>%
     y = "Average World Sales per Year (in USD)",
     x = "Year"
   ) +
-  theme_classic()
+  scale_y_continuous(labels = scales::dollar)
 ```
 
 
@@ -157,7 +167,7 @@ clean_movies %>%
     y = "Average World Sales per Year (in USD)",
     x = "Year"
   ) +
-  theme_classic()
+  scale_y_continuous(labels = scales::dollar)
 ```
 
 
@@ -197,7 +207,7 @@ clean_movies %>%
     y = "Average World Sales per Year (in USD)",
     x = "License"
   ) +
-  theme_classic()
+  scale_y_continuous(labels = scales::dollar)
 ```
 
 
@@ -218,8 +228,7 @@ clean_movies %>%
     title = "Total Top US Hollywood Movies per Year",
     y = "Number of Top Movies per Year",
     x = "Year"
-  ) +
-  theme_classic() +
+  )  +
   facet_wrap(vars(license))
 ```
 
@@ -244,7 +253,9 @@ clean_movies %>%
     y = "World Sales (in USD)",
     x = "Runtime (in minutes)"
   ) +
-  theme_classic(base_size = 10)
+  theme_classic(base_size = 10) +
+  scale_y_continuous(labels = scales::dollar) +
+  geom_smooth()
 ```
 
 
@@ -307,7 +318,8 @@ clean_movies %>%
     y = "Average World Sales per Year (in USD)",
     x = "Distributor"
   ) +
-  theme_classic(base_size = 10)
+  theme_classic(base_size = 10) +
+  scale_y_continuous(labels = scales::dollar)
 ```
 
 
@@ -402,7 +414,8 @@ top_distributors %>%
     y = "Total World Sales ($)",
     x = "Distributor"
   ) +
-  theme_classic()
+  theme_classic() +
+  scale_y_continuous(labels = scales::dollar)
   
 ```
 
